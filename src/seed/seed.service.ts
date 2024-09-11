@@ -1,19 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import axios, {AxiosInstance} from 'axios';
-import { PokeResponse } from './interfaces/poke-response.interface';
-import { InjectModel } from '@nestjs/mongoose';
-import { Pokemon } from 'src/pokemon/entities/pokemon.entity';
+import { AxiosAdapter } from 'src/common/adapters/axios.adapter';
 import { Model } from 'mongoose';
-import { CreatePokemonDto } from 'src/pokemon/dto/create-pokemon.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { PokeResponse } from './interfaces/poke-response.interface';
+import { Pokemon } from 'src/pokemon/entities/pokemon.entity';
+
 
 
 @Injectable()
 export class SeedService {
   constructor(
     @InjectModel( Pokemon.name)
-    private readonly pokemonModel: Model<Pokemon>
+    private readonly pokemonModel: Model<Pokemon>,
+    private readonly http: AxiosAdapter
   ){}
-  private readonly axios: AxiosInstance = axios
+  
   
   async executedSeed() {
     
@@ -29,7 +30,7 @@ export class SeedService {
     
     // modo2
     await this.pokemonModel.deleteMany({}); //equivalente ha delete* from pokemons - borrado total de la tabla
-    const {data} = await this.axios.get<PokeResponse>('https://pokeapi.co/api/v2/pokemon?limit=650');
+    const data = await this.http.get<PokeResponse>('https://pokeapi.co/api/v2/pokemon?limit=650');
     const pokemonToInsert: {name: string, no: number}[] = [];
 
     data.results.forEach(({name, url})=> {
