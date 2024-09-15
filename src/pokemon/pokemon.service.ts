@@ -1,19 +1,26 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, Query } from '@nestjs/common';
 import { isValidObjectId, Model } from 'mongoose';
-import { Pokemon } from './entities/pokemon.entity';
+import { InjectModel } from '@nestjs/mongoose';
+import { ConfigService } from '@nestjs/config';
 
+import { Pokemon } from './entities/pokemon.entity';
 import { CreatePokemonDto } from './dto/create-pokemon.dto';
 import { UpdatePokemonDto } from './dto/update-pokemon.dto';
-import { InjectModel } from '@nestjs/mongoose';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Injectable()
 export class PokemonService {
 
+    private defaultLimit: number;
   constructor(
     @InjectModel( Pokemon.name)
-    private readonly pokemonModel: Model<Pokemon>
-  ){}
+    private readonly pokemonModel: Model<Pokemon>,
+    private readonly configService: ConfigService
+  ){
+    // console.log(process.env.PORT)
+    // console.log(process.env.DEFAULt_LIMIT)
+    this.defaultLimit = configService.get<number>('defaultlimit')
+  }
   async create(createPokemonDto: CreatePokemonDto) {
     createPokemonDto.name = createPokemonDto.name.toLocaleLowerCase();
     // const pokemon = await this.pokemonModel.create(createPokemonDto);
@@ -27,7 +34,10 @@ export class PokemonService {
   }
 
   findAll(paginationDto: PaginationDto) {
-    const { limit = 10, offset = 0 } = paginationDto;
+
+
+
+    const { limit = this.defaultLimit, offset = 0 } = paginationDto;
     return this.pokemonModel.find()
     .limit(limit)
     .skip(offset)
@@ -48,18 +58,18 @@ export class PokemonService {
       pokemon = await this.pokemonModel.findOne({name: term.toLowerCase().trim() });
     }
     //si el pokemon no existe
-    if(!pokemon) throw new NotFoundException(`Pokemon with id, name or no "${term}" not found`) 
+    if(!pokemon) throw new NotFoundException(`Pokemon with id, name or no "${term}" not found`)
     return pokemon;
   }
 
   async update(term: string, updatePokemonDto: UpdatePokemonDto) {
-    
+
     if(updatePokemonDto.name) updatePokemonDto.name = updatePokemonDto.name.toLocaleLowerCase();
     try {
       const pokemon = await this.findOne(term);
       await pokemon.updateOne( updatePokemonDto);
       return {...pokemon.toJSON(), ...updatePokemonDto};
-      
+
     } catch (error) {
       this.handlerExceptions(error);
     }
@@ -84,6 +94,6 @@ export class PokemonService {
     }
     console.log(error);
     throw new InternalServerErrorException(`Can't create pokemon - Check server logs`);
-  
+
   }
 }
